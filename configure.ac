@@ -1013,6 +1013,7 @@ LDVERSION="$VERSION"
 # python might then depend on the C++ runtime
 # This is altered for AIX in order to build the export list before
 # linking.
+LINKCC="$LDSHARED"
 AC_SUBST(LINKCC)
 AC_MSG_CHECKING(LINKCC)
 if test -z "$LINKCC"
@@ -2412,6 +2413,7 @@ esac
 # Set info about shared libraries.
 AC_SUBST(SHLIB_SUFFIX)
 AC_SUBST(LDSHARED)
+AC_SUBST(LDFLAGS_EXE)
 AC_SUBST(LDCXXSHARED)
 AC_SUBST(BLDSHARED)
 AC_SUBST(CCSHARED)

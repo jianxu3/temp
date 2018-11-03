@@ -309,13 +309,6 @@ class PyBuildExt(build_ext):
         if compiler is not None:
             (ccshared,cflags) = sysconfig.get_config_vars('CCSHARED','CFLAGS')
             args['compiler_so'] = compiler + ' ' + ccshared + ' ' + cflags
-            #VxWorks uses '@filepath' extension to add include paths without overflowing windows cmd line buffer
-            if _vxworks:
-                cppflags = sysconfig.get_config_var('CPPFLAGS').split()
-                for item in cppflags:
-                    self.announce('ITEM: "%s"' % item )
-                    if item.startswith('@'):
-                        args['compiler_so'] = compiler + ' ' + ccshared + ' ' + cflags + ' ' + item
         self.compiler.set_executables(**args)
 
         build_ext.build_extensions(self)
@@ -570,12 +563,24 @@ class PyBuildExt(build_ext):
         # directly since an inconsistently reproducible issue comes up where
         # the environment variable is not set even though the value were passed
         # into configure and stored in the Makefile (issue found on OS X 10.3).
-        for env_var, arg_name, dir_list in (
+        for env_var, arg_name, option_list in (
                 ('LDFLAGS', '-R', self.compiler.runtime_library_dirs),
                 ('LDFLAGS', '-L', self.compiler.library_dirs),
-                ('CPPFLAGS', '-I', self.compiler.include_dirs)):
+                ('CPPFLAGS', '-I', self.compiler.include_dirs),
+                ('CPPFLAGS', '-D', self.compiler.macros),
+                ('CPPFLAGS', '@', self.compiler.option_files),
+                ('CPPFLAGS', '-isystem', self.compiler.system_include_dirs),
+                ('CPPFLAGS', '-imacros', self.compiler.macro_include_files),
+                ('CPPFLAGS', '-include', self.compiler.include_files)):
             env_val = sysconfig.get_config_var(env_var)
             if env_val:
+                if len(arg_name) < 2:
+                    for option in env_val.split():
+
+                        if arg_name == '@' and option.startswith(arg_name):
+                            option_list.append(option[1:])
+                    continue
+
                 # To prevent optparse from raising an exception about any
                 # options in env_val that it doesn't know about we strip out
                 # all double dashes and any dashes followed by a character
@@ -585,18 +590,33 @@ class PyBuildExt(build_ext):
                 # strip out double-dashes first so that we don't end up with
                 # substituting "--Long" to "-Long" and thus lead to "ong" being
                 # used for a library directory.
-                env_val = re.sub(r'(^|\s+)-(-|(?!%s))' % arg_name[1],
+                env_val = re.sub(r'(^|\s+)-(-|(?!%s))' % arg_name[1:],
+                                 ' ', env_val)
+                env_val = re.sub(r'(^|\s+)@(?!%s)' % arg_name[1:],
                                  ' ', env_val)
                 parser = optparse.OptionParser()
                 # Make sure that allowing args interspersed with options is
                 # allowed
                 parser.allow_interspersed_args = True
                 parser.error = lambda msg: None
-                parser.add_option(arg_name, dest="dirs", action="append")
+                if (len(arg_name) > 2):
+                    env_val = re.sub(r'(^|\s+)-%s' % arg_name[1:],
+                                 ' --%s=' % arg_name[1:], env_val)
+                    parser.add_option("--%s" % arg_name[1:], dest="dirs", action="append")
+                else:
+                    parser.add_option(arg_name, dest="dirs", action="append")
                 options = parser.parse_args(env_val.split())[0]
                 if options.dirs:
-                    for directory in reversed(options.dirs):
-                        add_dir_to_list(dir_list, directory)
+                    for value in reversed(options.dirs):
+                        if (arg_name == "-D"):
+                            self.compiler.define_macro(value)
+                        elif (arg_name == "-imacros"):
+                            self.compiler.macro_include_files.append(value)
+                        elif (arg_name == "-include"):
+                            self.compiler.include_files.append(value)
+                        else:
+                            add_dir_to_list(option_list, value)
+
 
         if ((not cross_compiling and
                 os.path.normpath(sys.base_prefix) != '/usr' and
@@ -610,14 +630,6 @@ class PyBuildExt(build_ext):
                             sysconfig.get_config_var("LIBDIR"))
             add_dir_to_list(self.compiler.include_dirs,
                             sysconfig.get_config_var("INCLUDEDIR"))
-
-        #VxWorks requires some macros from CPPFLAGS to select the correct CPU headers
-        if _vxworks:
-            cppflags = sysconfig.get_config_var('CPPFLAGS').split()
-            for item in cppflags:
-                self.announce('ITEM: "%s"' % item)
-                if item.startswith('-D'):
-                    self.compiler.define_macro(item[2:])
 
         system_lib_dirs = ['/lib64', '/usr/lib64', '/lib', '/usr/lib']
         system_include_dirs = ['/usr/include']

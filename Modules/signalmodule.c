@@ -529,7 +529,7 @@ signal_strsignal_impl(PyObject *module, int signalnum)
         return NULL;
     }
 
-#ifdef MS_WINDOWS
+#if defined(MS_WINDOWS) || defined(__VXWORKS__)
     /* Custom redefinition of POSIX signals allowed on Windows */
     switch (signalnum) {
         case SIGINT:

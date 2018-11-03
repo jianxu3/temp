@@ -609,7 +609,7 @@ class Popen(object):
       preexec_fn: (POSIX only) An object to be called in the child process
           just before the child is executed.
 
-      close_fds: Controls closing or inheriting of file descriptors. 
+      close_fds: Controls closing or inheriting of file descriptors.
 	      (not supported on VxWorks)
 
       shell: If true, the command will be executed through the shell.
@@ -679,7 +679,7 @@ class Popen(object):
                                  "VxWorks");
                 if close_fds:
                     raise ValueError("close_fds is not supported on VxWorks")
-                                     
+
                 if start_new_session:
                     raise ValueError("VxWorks does not support sessions");
 
@@ -1764,8 +1764,11 @@ class Popen(object):
                             data = os.read(key.fd, 32768)
                             if not data:
                                 selector.unregister(key.fileobj)
+                                key.fileobj.close()
                             self._fileobj2output[key.fileobj].append(data)
+
             self.wait(timeout=self._remaining_time(endtime))
+
             # All data exchanged.  Translate lists into strings.
             if stdout is not None:
                 stdout = b''.join(stdout)

@@ -97,8 +97,20 @@ class CCompiler:
         # undefinition is a 1-tuple (name,).
         self.macros = []
 
+        # 'system_include_dirs': a list of directories to search for system include files
+        self.system_include_dirs = []
+
+        # 'macro_include_files': a list of directories to search for include files with macros
+        self.macro_include_files = []
+
         # 'include_dirs': a list of directories to search for include files
         self.include_dirs = []
+
+        # 'include_files': a list of files to include
+        self.include_files = []
+
+        # 'option_files': a list of files that contain additional options
+        self.option_files = []
 
         # 'libraries': a list of libraries to include in any link
         # (library names, not filenames: eg. "foo" not "libfoo.a")
@@ -330,6 +342,11 @@ class CCompiler:
             raise TypeError(
                   "'include_dirs' (if supplied) must be a list of strings")
 
+        sysincdirs = self.system_include_dirs or []
+        macincdirs = self.macro_include_files or []
+        incfiles = self.include_files or []
+        optfiles = self.option_files or []
+
         if extra is None:
             extra = []
 
@@ -338,7 +355,7 @@ class CCompiler:
                                         output_dir=outdir)
         assert len(objects) == len(sources)
 
-        pp_opts = gen_preprocess_options(macros, incdirs)
+        pp_opts = gen_preprocess_options(macros, incdirs, sysincdirs, macincdirs, incfiles, optfiles)
 
         build = {}
         for i in range(len(sources)):
@@ -1031,7 +1048,8 @@ def new_compiler(plat=None, compiler=None, verbose=0, dry_run=0, force=0):
     return klass(None, dry_run, force)
 
 
-def gen_preprocess_options(macros, include_dirs):
+def gen_preprocess_options(macros, include_dirs, system_include_dirs, macro_include_files,
+                           include_files, option_files):
     """Generate C pre-processor options (-D, -U, -I) as used by at least
     two types of compilers: the typical Unix compiler and Visual C++.
     'macros' is the usual thing, a list of 1- or 2-tuples, where (name,)
@@ -1073,6 +1091,19 @@ def gen_preprocess_options(macros, include_dirs):
 
     for dir in include_dirs:
         pp_opts.append("-I%s" % dir)
+
+    for dir in system_include_dirs:
+        pp_opts.append("-isystem%s" % dir)
+
+    for dir in macro_include_files:
+        pp_opts.append("-imacro%s" % dir)
+
+    for dir in include_files:
+        pp_opts.append("-include%s" % dir)
+
+    for dir in option_files:
+        pp_opts.append("@%s" % dir)
+
     return pp_opts
 
 
