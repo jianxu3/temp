@@ -5832,7 +5832,7 @@ LDVERSION="$VERSION"
 # python might then depend on the C++ runtime
 # This is altered for AIX in order to build the export list before
 # linking.
-LINKCC="$LDSHARED"
+LINKCC="$LD"
 
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking LINKCC" >&5
 $as_echo_n "checking LINKCC... " >&6; }

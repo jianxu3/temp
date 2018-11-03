@@ -723,7 +723,7 @@ Modules/Setup: $(srcdir)/Modules/Setup.dist
 	fi
 
 Programs/_testembed: Programs/_testembed.o $(LIBRARY) $(LDLIBRARY) $(PY3LIBRARY)
-	$(LINKCC) $(PY_LDFLAGS) $(LINKFORSHARED) -o $@ Programs/_testembed.o $(BLDLIBRARY) $(LIBS) $(MODLIBS) $(SYSLIBS) $(LDLAST)
+	$(LINKCC) $(PY_LDFLAGS) $(LINKFORSHARED) $(LDFLAGS_EXE)  -o $@ Programs/_testembed.o $(BLDLIBRARY) $(LIBS) $(MODLIBS) $(SYSLIBS) $(LDLAST)
 
 ############################################################################
 # Importlib
